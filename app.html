@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VectoAI — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0a14;--bg2:#12121f;--bg3:#1a1a2e;--accent:#7c3aed;--accent2:#a78bfa;--text:#f1f0ff;--muted:#8b8aa8;--border:#2a2a3e}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* SIDEBAR */
+.layout{display:flex;min-height:100vh}
+.sidebar{width:220px;background:var(--bg2);border-right:1px solid var(--border);padding:20px 16px;display:flex;flex-direction:column;position:fixed;height:100vh}
+.logo{font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px;margin-bottom:28px;text-decoration:none;color:var(--text)}
+.logo-icon{width:30px;height:30px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;font-size:14px;font-weight:500;color:var(--muted);text-decoration:none;margin-bottom:4px;transition:all .2s;cursor:pointer;border:none;background:none;width:100%;font-family:inherit}
+.nav-item:hover,.nav-item.active{background:var(--bg3);color:var(--text)}
+.nav-item .icon{font-size:16px;width:20px;text-align:center}
+.sidebar-bottom{margin-top:auto}
+.user-chip{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px}
+.user-name{font-weight:600;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.user-plan{font-size:11px;color:var(--muted)}
+.plan-badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700}
+.plan-badge.free{background:rgba(139,138,168,0.2);color:var(--muted)}
+.plan-badge.pro{background:rgba(124,58,237,0.2);color:var(--accent2)}
+
+/* MAIN */
+.main{margin-left:220px;padding:28px;flex:1}
+.page-title{font-size:22px;font-weight:800;margin-bottom:4px}
+.page-sub{font-size:14px;color:var(--muted);margin-bottom:24px}
+
+/* USAGE BAR */
+.usage-bar{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:16px;margin-bottom:24px}
+.usage-text{font-size:13px;color:var(--muted);flex:1}
+.usage-text strong{color:var(--text)}
+.bar{flex:2;height:6px;background:var(--bg3);border-radius:99px;overflow:hidden}
+.bar-fill{height:100%;background:var(--accent);border-radius:99px;transition:width .4s}
+.upgrade-link{font-size:12px;font-weight:700;color:var(--accent2);text-decoration:none;white-space:nowrap}
+.upgrade-link:hover{color:var(--text)}
+
+/* TOOL */
+.tool-area{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:24px}
+.drop-zone{border:2px dashed var(--border);border-radius:12px;padding:40px 20px;text-align:center;cursor:pointer;transition:all .2s;position:relative;margin-bottom:20px}
+.drop-zone:hover,.drop-zone.over{border-color:var(--accent);background:rgba(124,58,237,0.05)}
+.drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.drop-icon{font-size:36px;margin-bottom:10px}
+.drop-zone h3{font-size:15px;font-weight:700;margin-bottom:4px}
+.drop-zone p{font-size:13px;color:var(--muted)}
+
+/* STYLES */
+.style-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.style-label{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:0.5px;margin-bottom:10px;display:block}
+.style-chip{padding:8px 16px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;background:var(--bg3);color:var(--muted);transition:all .2s;border-radius:99px;font-family:inherit}
+.style-chip:hover{border-color:var(--accent2);color:var(--accent2)}
+.style-chip.active{background:rgba(124,58,237,0.2);border-color:var(--accent);color:var(--accent2)}
+
+/* WORKSPACE */
+.workspace{display:none;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.workspace.show{display:grid}
+.panel{background:var(--bg3);border-radius:12px;overflow:hidden}
+.panel-head{padding:10px 14px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;display:flex;justify-content:space-between;align-items:center}
+.panel-body{min-height:240px;display:flex;align-items:center;justify-content:center;padding:12px}
+.panel-body img{max-width:100%;max-height:230px;border-radius:6px;object-fit:contain}
+.panel-body.checker{background:repeating-conic-gradient(#1e1e32 0% 25%,transparent 0% 50%) 0 0/20px 20px}
+.panel-body svg{max-width:100%;max-height:230px}
+.empty-hint{text-align:center;color:var(--muted);font-size:13px}
+.empty-hint .ei{font-size:28px;margin-bottom:6px;display:block;opacity:.4}
+
+/* BUTTONS */
+.action-row{display:flex;gap:10px;align-items:center}
+.btn-conv{flex:1;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s}
+.btn-conv:hover{background:#6d28d9}
+.btn-conv:disabled{opacity:.5;cursor:not-allowed}
+.btn-dl{padding:13px 18px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:all .2s}
+.btn-dl:hover{border-color:var(--accent2)}
+.btn-dl.hidden{display:none}
+
+/* PROGRESS */
+.prog-wrap{margin-top:12px;display:none}
+.prog-wrap.show{display:block}
+.prog-bar{height:4px;background:var(--bg3);border-radius:99px;overflow:hidden}
+.prog-fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:99px;transition:width .5s}
+.prog-text{font-size:12px;color:var(--muted);margin-top:6px;text-align:center}
+
+/* HISTORY */
+.history-section{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px}
+.section-head{font-size:16px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.history-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+.hist-item{background:var(--bg3);border:1px solid var(--border);border-radius:10px;overflow:hidden;cursor:pointer;transition:border-color .2s}
+.hist-item:hover{border-color:var(--accent)}
+.hist-thumb{height:100px;display:flex;align-items:center;justify-content:center;background:repeating-conic-gradient(#1e1e32 0% 25%,transparent 0% 50%) 0 0/16px 16px}
+.hist-thumb svg{max-width:90%;max-height:90px}
+.hist-meta{padding:8px;font-size:11px;color:var(--muted)}
+.hist-date{display:block;margin-bottom:2px}
+.hist-style{font-weight:700;color:var(--accent2)}
+.no-history{text-align:center;color:var(--muted);font-size:14px;padding:20px}
+
+/* LIMIT OVERLAY */
+.limit-overlay{background:rgba(10,10,20,0.9);position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:200}
+.limit-overlay.show{display:flex}
+.limit-card{background:var(--bg2);border:1px solid var(--accent);border-radius:16px;padding:32px;max-width:380px;text-align:center}
+.limit-card h3{font-size:20px;font-weight:800;margin-bottom:10px}
+.limit-card p{color:var(--muted);font-size:14px;margin-bottom:20px}
+
+@media(max-width:700px){.sidebar{display:none}.main{margin-left:0}}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <div class="sidebar">
+    <a href="index.html" class="logo"><div class="logo-icon">⬡</div> VectoAI</a>
+    <button class="nav-item active" onclick="showPage('converter')"><span class="icon">⚡</span> Convert</button>
+    <button class="nav-item" onclick="showPage('history')"><span class="icon">📦</span> History</button>
+    <a href="payment.html" class="nav-item"><span class="icon">⭐</span> Upgrade Pro</a>
+    <div class="sidebar-bottom">
+      <div class="user-chip">
+        <div class="user-name" id="userName">Loading...</div>
+        <div class="user-plan">Plan: <span class="plan-badge free" id="planBadge">Free</span></div>
+      </div>
+      <button class="nav-item" style="margin-top:8px" onclick="logout()"><span class="icon">🚪</span> Logout</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- CONVERTER PAGE -->
+    <div id="converterPage">
+      <div class="page-title">⚡ Image to Vector</div>
+      <div class="page-sub">Upload your image and convert to professional SVG vector</div>
+
+      <div class="usage-bar" id="usageBar">
+        <div class="usage-text">Today: <strong id="usageCount">0</strong> / <span id="usageLimit">3</span> conversions used</div>
+        <div class="bar"><div class="bar-fill" id="barFill" style="width:0%"></div></div>
+        <a href="payment.html" class="upgrade-link" id="upgradeLink">⭐ Upgrade</a>
+      </div>
+
+      <div class="tool-area">
+        <div class="drop-zone" id="dropZone">
+          <input type="file" id="fileInput" accept="image/*">
+          <div class="drop-icon">🖼️</div>
+          <h3>Drop image here or click to upload</h3>
+          <p>PNG, JPG, WEBP — Max 5MB</p>
+        </div>
+
+        <span class="style-label">VECTOR STYLE</span>
+        <div class="style-row" id="styleRow">
+          <button class="style-chip active" data-style="flat">🎨 Flat design</button>
+          <button class="style-chip" data-style="minimal">✦ Minimal</button>
+          <button class="style-chip" data-style="geometric">📐 Geometric</button>
+          <button class="style-chip" data-style="detailed">🖌️ Detailed</button>
+          <button class="style-chip" data-style="lineart">✏️ Line art</button>
+        </div>
+
+        <div class="workspace" id="workspace">
+          <div class="panel">
+            <div class="panel-head">ORIGINAL <button onclick="resetImg()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px">↺ Change</button></div>
+            <div class="panel-body"><img id="prevImg" src="" alt="preview"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head">VECTOR SVG</div>
+            <div class="panel-body checker" id="vecPanel">
+              <div class="empty-hint"><span class="ei">◈</span>Click convert to generate</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button class="btn-conv" id="convBtn" disabled>⚡ Convert to Vector</button>
+          <a class="btn-dl hidden" id="dlBtn" download="vector.svg">💾 SVG</a>
+        </div>
+
+        <div class="prog-wrap" id="progWrap">
+          <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+          <div class="prog-text" id="progText">Processing...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY PAGE -->
+    <div id="historyPage" style="display:none">
+      <div class="page-title">📦 Conversion History</div>
+      <div class="page-sub">Your saved vector conversions</div>
+      <div class="history-section">
+        <div id="historyGrid" class="history-grid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LIMIT OVERLAY -->
+<div class="limit-overlay" id="limitOverlay">
+  <div class="limit-card">
+    <div style="font-size:48px;margin-bottom:12px">⚡</div>
+    <h3>Daily limit reached</h3>
+    <p>You've used all 3 free conversions for today. Upgrade to Pro for unlimited conversions!</p>
+    <a href="payment.html" class="btn-conv" style="display:inline-flex;text-decoration:none;margin-bottom:12px;width:100%;justify-content:center">⭐ Upgrade to Pro</a>
+    <button onclick="document.getElementById('limitOverlay').classList.remove('show')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px">Maybe later</button>
+  </div>
+</div>
+
+<script>
+const sb = supabase.createClient(CONFIG.supabase.url, CONFIG.supabase.anonKey);
+let currentUser = null, userProfile = null, imgBase64 = null, imgMime = null, selectedStyle = 'flat', svgHistory = [];
+
+const styleDescs = {
+  flat:'flat design style with solid colors, no gradients, clean bold shapes',
+  minimal:'minimalist style with very few colors, extreme simplicity, essential shapes only',
+  geometric:'geometric style with triangles, polygons, angular shapes, low-poly art',
+  detailed:'detailed vector illustration with multiple layers, rich colors, artistic rendering',
+  lineart:'clean line art with thin strokes, minimal fills, elegant sketch-like style'
+};
+
+// Init
+(async()=>{
+  const {data:{session}} = await sb.auth.getSession();
+  if(!session){window.location.href='auth.html';return;}
+  currentUser = session.user;
+  const {data:p} = await sb.from('profiles').select('*').eq('id',currentUser.id).single();
+  userProfile = p || {name:currentUser.email,plan:'free'};
+  document.getElementById('userName').textContent = userProfile.name || currentUser.email;
+  const badge = document.getElementById('planBadge');
+  badge.textContent = userProfile.plan==='pro'?'Pro ⭐':'Free';
+  badge.className = 'plan-badge '+(userProfile.plan==='pro'?'pro':'free');
+  if(userProfile.plan==='pro'){
+    document.getElementById('upgradeLink').style.display='none';
+    document.getElementById('usageLimit').textContent='∞';
+  }
+  await updateUsage();
+  await loadHistory();
+})();
+
+async function updateUsage(){
+  const today = new Date().toISOString().slice(0,10);
+  const {count} = await sb.from('conversions').select('*',{count:'exact',head:true})
+    .eq('user_id',currentUser.id).gte('created_at',today+'T00:00:00').lte('created_at',today+'T23:59:59');
+  const limit = userProfile.plan==='pro'?9999:CONFIG.freeLimit;
+  const used = count||0;
+  document.getElementById('usageCount').textContent = used;
+  if(userProfile.plan!=='pro') document.getElementById('usageLimit').textContent = limit;
+  document.getElementById('barFill').style.width = userProfile.plan==='pro'?'10%':Math.min(100,(used/limit)*100)+'%';
+}
+
+// Style chips
+document.querySelectorAll('.style-chip').forEach(c=>{
+  c.addEventListener('click',()=>{
+    document.querySelectorAll('.style-chip').forEach(x=>x.classList.remove('active'));
+    c.classList.add('active'); selectedStyle=c.dataset.style;
+  });
+});
+
+// File drop
+const dz = document.getElementById('dropZone');
+const fi = document.getElementById('fileInput');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over')});
+dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0])});
+fi.addEventListener('change',e=>{if(e.target.files[0])handleFile(e.target.files[0])});
+
+function handleFile(file){
+  if(file.size>5*1024*1024){alert('File too large. Max 5MB.');return;}
+  imgMime=file.type;
+  const r=new FileReader();
+  r.onload=e=>{
+    imgBase64=e.target.result.split(',')[1];
+    document.getElementById('prevImg').src=e.target.result;
+    document.getElementById('workspace').classList.add('show');
+    document.getElementById('convBtn').disabled=false;
+    document.getElementById('vecPanel').innerHTML='<div class="empty-hint"><span class="ei">◈</span>Click convert to generate</div>';
+    document.getElementById('dlBtn').classList.add('hidden');
+  };
+  r.readAsDataURL(file);
+}
+
+function resetImg(){
+  imgBase64=null;
+  document.getElementById('workspace').classList.remove('show');
+  document.getElementById('convBtn').disabled=true;
+  document.getElementById('dlBtn').classList.add('hidden');
+  fi.value='';
+}
+
+// Convert
+document.getElementById('convBtn').addEventListener('click',async()=>{
+  if(!imgBase64)return;
+  // Check limit
+  if(userProfile.plan!=='pro'){
+    const today=new Date().toISOString().slice(0,10);
+    const {count}=await sb.from('conversions').select('*',{count:'exact',head:true})
+      .eq('user_id',currentUser.id).gte('created_at',today+'T00:00:00').lte('created_at',today+'T23:59:59');
+    if((count||0)>=CONFIG.freeLimit){
+      document.getElementById('limitOverlay').classList.add('show'); return;
+    }
+  }
+  const btn=document.getElementById('convBtn');
+  btn.disabled=true; btn.innerHTML='<span style="display:inline-block;animation:spin 1s linear infinite">⟳</span> Converting...';
+  setProgress(15,'Analyzing your image...');
+
+  try{
+    setProgress(35,'AI is vectorizing...');
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',max_tokens:4000,
+        system:`You are a professional vector graphics artist. Analyze the image and create a high-quality SVG. Return ONLY raw SVG code starting with <svg. viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg". Use ${styleDescs[selectedStyle]}. No background unless needed. Clean, professional, Adobe Stock quality.`,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:imgMime,data:imgBase64}},
+          {type:'text',text:`Convert this image to SVG vector in ${selectedStyle} style. Return ONLY the SVG code starting with <svg`}
+        ]}]
+      })
+    });
+    setProgress(80,'Processing output...');
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error?.message||'API error');
+    let svg=data.content.map(b=>b.text||'').join('');
+    const m=svg.match(/<svg[\s\S]*<\/svg>/i);
+    if(!m)throw new Error('No SVG found');
+    svg=m[0];
+    if(!svg.includes('xmlns'))svg=svg.replace('<svg','<svg xmlns="http://www.w3.org/2000/svg"');
+
+    // Show result
+    document.getElementById('vecPanel').innerHTML=svg;
+    const blob=new Blob([svg],{type:'image/svg+xml'});
+    const url=URL.createObjectURL(blob);
+    const dlBtn=document.getElementById('dlBtn');
+    dlBtn.href=url; dlBtn.download='vectoai_'+Date.now()+'.svg';
+    dlBtn.classList.remove('hidden');
+    setProgress(100,'✅ Done!');
+
+    // Save to DB
+    await sb.from('conversions').insert({user_id:currentUser.id,style:selectedStyle,svg_data:svg});
+    await updateUsage();
+    await loadHistory();
+
+    setTimeout(()=>{document.getElementById('progWrap').classList.remove('show');},2000);
+  }catch(e){
+    setProgress(0,'Error: '+e.message);
+    setTimeout(()=>document.getElementById('progWrap').classList.remove('show'),3000);
+  }
+  btn.disabled=false; btn.innerHTML='⚡ Convert to Vector';
+});
+
+function setProgress(pct,text){
+  const pw=document.getElementById('progWrap');
+  pw.classList.add('show');
+  document.getElementById('progFill').style.width=pct+'%';
+  document.getElementById('progText').textContent=text;
+}
+
+// History
+async function loadHistory(){
+  const {data}=await sb.from('conversions').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(20);
+  svgHistory=data||[];
+  renderHistory();
+}
+
+function renderHistory(){
+  const grid=document.getElementById('historyGrid');
+  if(!svgHistory.length){grid.innerHTML='<div class="no-history">No conversions yet. Go convert something! ⚡</div>';return;}
+  grid.innerHTML=svgHistory.map((h,i)=>`
+    <div class="hist-item" onclick="downloadHistItem(${i})">
+      <div class="hist-thumb">${h.svg_data?h.svg_data.substring(0,500)+'</svg>':'<span style="color:var(--muted);font-size:12px">No preview</span>'}</div>
+      <div class="hist-meta"><span class="hist-date">${new Date(h.created_at).toLocaleDateString()}</span><span class="hist-style">${h.style||'flat'}</span></div>
+    </div>`).join('');
+}
+
+function downloadHistItem(i){
+  const h=svgHistory[i];
+  if(!h.svg_data)return;
+  const blob=new Blob([h.svg_data],{type:'image/svg+xml'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download='vectoai_'+i+'.svg'; a.click();
+}
+
+function showPage(page){
+  document.getElementById('converterPage').style.display=page==='converter'?'block':'none';
+  document.getElementById('historyPage').style.display=page==='history'?'block':'none';
+  document.querySelectorAll('.nav-item').forEach((n,i)=>n.classList.toggle('active',i===(page==='converter'?0:1)));
+}
+
+async function logout(){
+  await sb.auth.signOut(); window.location.href='auth.html';
+}
+</script>
+</body>
+</html>

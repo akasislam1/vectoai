@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VectoAI — Login / Sign Up</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0a14;--bg2:#12121f;--bg3:#1a1a2e;--accent:#7c3aed;--accent2:#a78bfa;--text:#f1f0ff;--muted:#8b8aa8;--border:#2a2a3e}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:36px;width:100%;max-width:420px}
+.logo{text-align:center;margin-bottom:28px}
+.logo a{font-size:22px;font-weight:800;color:var(--text);text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.logo-icon{width:36px;height:36px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.tabs{display:flex;background:var(--bg3);border-radius:10px;padding:4px;margin-bottom:28px}
+.tab-btn{flex:1;padding:9px;border:none;background:transparent;color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;border-radius:7px;transition:all .2s;font-family:inherit}
+.tab-btn.active{background:var(--accent);color:#fff}
+label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px}
+input{width:100%;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color .2s;margin-bottom:16px}
+input:focus{border-color:var(--accent)}
+input::placeholder{color:var(--muted)}
+.btn{width:100%;padding:13px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#6d28d9}
+.btn-primary:disabled{opacity:0.6;cursor:not-allowed}
+.msg{padding:12px 14px;border-radius:10px;font-size:13px;margin-bottom:16px;display:none}
+.msg.error{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#fca5a5}
+.msg.success{background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);color:#86efac}
+.form-section{display:none}
+.form-section.active{display:block}
+.divider{text-align:center;color:var(--muted);font-size:12px;margin:16px 0;position:relative}
+.divider::before,.divider::after{content:'';position:absolute;top:50%;width:42%;height:1px;background:var(--border)}
+.divider::before{left:0}.divider::after{right:0}
+.back-link{text-align:center;margin-top:20px;font-size:13px;color:var(--muted)}
+.back-link a{color:var(--accent2);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo"><a href="index.html"><div class="logo-icon">⬡</div> VectoAI</a></div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('login')">Login</button>
+    <button class="tab-btn" onclick="switchTab('signup')">Sign Up</button>
+  </div>
+
+  <div class="msg" id="msg"></div>
+
+  <!-- LOGIN -->
+  <div class="form-section active" id="loginForm">
+    <label>Email</label>
+    <input type="email" id="loginEmail" placeholder="you@example.com">
+    <label>Password</label>
+    <input type="password" id="loginPass" placeholder="••••••••">
+    <button class="btn btn-primary" onclick="login()" id="loginBtn">Login →</button>
+  </div>
+
+  <!-- SIGNUP -->
+  <div class="form-section" id="signupForm">
+    <label>Full Name</label>
+    <input type="text" id="signupName" placeholder="Your name">
+    <label>Email</label>
+    <input type="email" id="signupEmail" placeholder="you@example.com">
+    <label>Password</label>
+    <input type="password" id="signupPass" placeholder="Min 6 characters">
+    <button class="btn btn-primary" onclick="signup()" id="signupBtn">Create account →</button>
+  </div>
+
+  <div class="back-link"><a href="index.html">← Back to home</a></div>
+</div>
+
+<script>
+const sb = supabase.createClient(CONFIG.supabase.url, CONFIG.supabase.anonKey);
+
+// Check if already logged in
+sb.auth.getSession().then(({data:{session}})=>{
+  if(session) window.location.href='app.html';
+});
+
+// Check URL params for tab
+const params = new URLSearchParams(window.location.search);
+if(params.get('tab')==='signup') switchTab('signup');
+
+function switchTab(tab){
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',i===(tab==='login'?0:1)));
+  document.getElementById('loginForm').classList.toggle('active',tab==='login');
+  document.getElementById('signupForm').classList.toggle('active',tab==='signup');
+  showMsg('');
+}
+
+function showMsg(text,type='error'){
+  const el=document.getElementById('msg');
+  el.textContent=text;
+  el.className='msg '+(type);
+  el.style.display=text?'block':'none';
+}
+
+async function login(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const pass=document.getElementById('loginPass').value;
+  if(!email||!pass)return showMsg('Please fill all fields');
+  const btn=document.getElementById('loginBtn');
+  btn.disabled=true; btn.textContent='Logging in...';
+  const {error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){showMsg(error.message);btn.disabled=false;btn.textContent='Login →';}
+  else window.location.href='app.html';
+}
+
+async function signup(){
+  const name=document.getElementById('signupName').value.trim();
+  const email=document.getElementById('signupEmail').value.trim();
+  const pass=document.getElementById('signupPass').value;
+  if(!name||!email||!pass)return showMsg('Please fill all fields');
+  if(pass.length<6)return showMsg('Password must be at least 6 characters');
+  const btn=document.getElementById('signupBtn');
+  btn.disabled=true; btn.textContent='Creating account...';
+  const {data,error}=await sb.auth.signUp({email,password:pass,options:{data:{full_name:name}}});
+  if(error){showMsg(error.message);btn.disabled=false;btn.textContent='Create account →';}
+  else{
+    // Insert profile
+    await sb.from('profiles').insert({id:data.user.id,email,name,plan:'free'});
+    showMsg('Account created! Redirecting...','success');
+    setTimeout(()=>window.location.href='app.html',1500);
+  }
+}
+</script>
+</body>
+</html>

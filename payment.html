@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VectoAI — Upgrade to Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0a14;--bg2:#12121f;--bg3:#1a1a2e;--accent:#7c3aed;--accent2:#a78bfa;--text:#f1f0ff;--muted:#8b8aa8;--border:#2a2a3e}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px}
+.container{max-width:680px;margin:0 auto}
+.logo{font-size:18px;font-weight:800;display:inline-flex;align-items:center;gap:8px;margin-bottom:28px;text-decoration:none;color:var(--text)}
+.logo-icon{width:30px;height:30px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center}
+h1{font-size:28px;font-weight:800;margin-bottom:6px}
+.subtitle{color:var(--muted);font-size:15px;margin-bottom:28px}
+
+/* PLAN TOGGLE */
+.plan-toggle{display:flex;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:4px;margin-bottom:24px;width:fit-content}
+.ptab{padding:8px 20px;border:none;background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;border-radius:7px;transition:all .2s;font-family:inherit}
+.ptab.active{background:var(--accent);color:#fff}
+
+/* PRICING CARDS */
+.price-display{background:var(--bg2);border:1px solid rgba(124,58,237,0.4);border-radius:14px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.price-amt{font-size:36px;font-weight:800}
+.price-amt span{font-size:16px;font-weight:400;color:var(--muted)}
+.price-features{list-style:none}
+.price-features li{font-size:13px;color:var(--muted);padding:3px 0;display:flex;align-items:center;gap:6px}
+.price-features li::before{content:'✓';color:#22c55e;font-weight:700}
+
+/* PAYMENT STEPS */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:16px}
+.card-title{font-size:14px;font-weight:800;letter-spacing:0.5px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.step-num{width:24px;height:24px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800}
+
+/* PAYMENT NUMBERS */
+.pay-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:8px}
+.pay-option{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:all .2s}
+.pay-option:hover,.pay-option.selected{border-color:var(--accent);background:rgba(124,58,237,0.08)}
+.pay-name{font-size:13px;font-weight:700;margin-bottom:4px}
+.pay-number{font-size:15px;font-weight:800;color:var(--accent2);font-family:monospace;letter-spacing:1px;cursor:pointer}
+.pay-copy{font-size:11px;color:var(--muted);margin-top:4px;cursor:pointer}
+.pay-copy:hover{color:var(--accent2)}
+.copied{color:#22c55e!important}
+
+/* FORM */
+label{display:block;font-size:13px;font-weight:700;color:var(--muted);margin-bottom:6px}
+input,select,textarea{width:100%;padding:11px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color .2s;margin-bottom:14px}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+input::placeholder,textarea::placeholder{color:var(--muted)}
+select option{background:var(--bg3)}
+textarea{resize:vertical;min-height:80px}
+
+.file-upload{border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:all .2s;position:relative;margin-bottom:14px}
+.file-upload:hover,.file-upload.has-file{border-color:var(--accent);background:rgba(124,58,237,0.05)}
+.file-upload input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.file-upload .fu-icon{font-size:24px;margin-bottom:6px}
+.file-upload p{font-size:13px;color:var(--muted)}
+
+.btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#6d28d9}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+
+.success-box{background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:12px;padding:20px;text-align:center;display:none}
+.success-box h3{font-size:18px;font-weight:800;color:#86efac;margin-bottom:8px}
+.success-box p{font-size:14px;color:var(--muted)}
+
+.msg{padding:11px 14px;border-radius:10px;font-size:13px;margin-bottom:14px;display:none}
+.msg.error{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#fca5a5}
+.back-link{margin-top:20px;text-align:center;font-size:13px;color:var(--muted)}
+.back-link a{color:var(--accent2);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="app.html" class="logo"><div class="logo-icon">⬡</div> VectoAI</a>
+
+  <h1>⭐ Upgrade to Pro</h1>
+  <p class="subtitle">Get unlimited conversions and unlock all features</p>
+
+  <!-- PLAN TOGGLE -->
+  <div class="plan-toggle">
+    <button class="ptab active" onclick="setPlan('monthly')">Monthly</button>
+    <button class="ptab" onclick="setPlan('yearly')">Yearly <span style="color:#22c55e;font-size:11px">Save 30%</span></button>
+  </div>
+
+  <div class="price-display">
+    <div>
+      <div class="price-amt" id="priceAmt">৳299<span>/month</span></div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px" id="priceSub">Billed monthly</div>
+    </div>
+    <ul class="price-features">
+      <li>Unlimited conversions</li>
+      <li>All 5 vector styles</li>
+      <li>Conversion history</li>
+      <li>Priority processing</li>
+    </ul>
+  </div>
+
+  <!-- STEP 1: PAY -->
+  <div class="card">
+    <div class="card-title"><div class="step-num">1</div> Send payment to any method below</div>
+    <div class="pay-options">
+      <div class="pay-option" id="opt-bkash" onclick="selectMethod('bkash')">
+        <div class="pay-name">📱 bKash</div>
+        <div class="pay-number" id="bkashNum">01XXXXXXXXX</div>
+        <div class="pay-copy" onclick="copyNum(event,'bkashNum')">📋 Copy number</div>
+      </div>
+      <div class="pay-option" id="opt-nagad" onclick="selectMethod('nagad')">
+        <div class="pay-name">📱 Nagad</div>
+        <div class="pay-number" id="nagadNum">01XXXXXXXXX</div>
+        <div class="pay-copy" onclick="copyNum(event,'nagadNum')">📋 Copy number</div>
+      </div>
+      <div class="pay-option" id="opt-bank" onclick="selectMethod('bank')">
+        <div class="pay-name">🏦 Bank Transfer</div>
+        <div class="pay-number" style="font-size:11px;letter-spacing:0" id="bankNum">See details</div>
+        <div class="pay-copy" onclick="copyNum(event,'bankNum')">📋 Copy details</div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-top:8px">💡 Send amount: <strong style="color:var(--accent2)" id="amtHint">৳299</strong> — use "Send Money" (Personal number) or merchant</div>
+  </div>
+
+  <!-- STEP 2: FORM -->
+  <div class="card">
+    <div class="card-title"><div class="step-num">2</div> Submit payment proof</div>
+
+    <div class="msg" id="formMsg"></div>
+
+    <label>Payment method</label>
+    <select id="method">
+      <option value="">Select method</option>
+      <option value="bkash">bKash</option>
+      <option value="nagad">Nagad</option>
+      <option value="bank">Bank Transfer</option>
+    </select>
+
+    <label>Your bKash/Nagad/sender number</label>
+    <input type="text" id="senderNum" placeholder="01XXXXXXXXX">
+
+    <label>Transaction ID / TrxID</label>
+    <input type="text" id="txnId" placeholder="e.g. ABC1234567">
+
+    <label>Amount sent (BDT)</label>
+    <input type="number" id="amount" placeholder="e.g. 299">
+
+    <label>Plan</label>
+    <select id="planSel">
+      <option value="monthly">Monthly — ৳299</option>
+      <option value="yearly">Yearly — ৳2499</option>
+    </select>
+
+    <label>Payment screenshot (optional but recommended)</label>
+    <div class="file-upload" id="fileUpload">
+      <input type="file" id="screenshotFile" accept="image/*" onchange="handleScreenshot(this)">
+      <div class="fu-icon">📸</div>
+      <p id="fuText">Click to upload screenshot</p>
+    </div>
+
+    <label>Note (optional)</label>
+    <textarea id="note" placeholder="Any message for admin..."></textarea>
+
+    <button class="btn btn-primary" id="submitBtn" onclick="submitProof()">📨 Submit Payment Proof</button>
+  </div>
+
+  <div class="success-box" id="successBox">
+    <div style="font-size:40px;margin-bottom:10px">🎉</div>
+    <h3>Proof submitted!</h3>
+    <p>We'll review your payment and activate your Pro access within a few hours. Check your email for confirmation.</p>
+    <a href="app.html" style="display:inline-block;margin-top:16px;color:var(--accent2);text-decoration:none;font-weight:700">← Back to app</a>
+  </div>
+
+  <div class="back-link"><a href="app.html">← Back to dashboard</a></div>
+</div>
+
+<script>
+const sb = supabase.createClient(CONFIG.supabase.url, CONFIG.supabase.anonKey);
+let currentUser = null, screenshotFile = null, selectedPlan = 'monthly';
+
+// Init numbers from config
+document.getElementById('bkashNum').textContent = CONFIG.payment.bkash;
+document.getElementById('nagadNum').textContent = CONFIG.payment.nagad;
+document.getElementById('bankNum').textContent = CONFIG.payment.bankInfo;
+
+(async()=>{
+  const {data:{session}} = await sb.auth.getSession();
+  if(!session){window.location.href='auth.html';return;}
+  currentUser = session.user;
+})();
+
+function setPlan(plan){
+  selectedPlan = plan;
+  document.querySelectorAll('.ptab').forEach((b,i)=>b.classList.toggle('active',i===(plan==='monthly'?0:1)));
+  document.getElementById('planSel').value = plan;
+  if(plan==='monthly'){
+    document.getElementById('priceAmt').innerHTML='৳299<span>/month</span>';
+    document.getElementById('priceSub').textContent='Billed monthly';
+    document.getElementById('amtHint').textContent='৳299';
+    document.getElementById('amount').placeholder='299';
+  } else {
+    document.getElementById('priceAmt').innerHTML='৳2,499<span>/year</span>';
+    document.getElementById('priceSub').textContent='Billed yearly — save ৳1,089';
+    document.getElementById('amtHint').textContent='৳2,499';
+    document.getElementById('amount').placeholder='2499';
+  }
+}
+
+function selectMethod(m){
+  document.querySelectorAll('.pay-option').forEach(o=>o.classList.remove('selected'));
+  document.getElementById('opt-'+m).classList.add('selected');
+  document.getElementById('method').value = m;
+}
+
+function copyNum(e, id){
+  e.stopPropagation();
+  const text = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(text).then(()=>{
+    const el = e.target; el.textContent='✅ Copied!'; el.classList.add('copied');
+    setTimeout(()=>{el.textContent='📋 Copy number';el.classList.remove('copied');},2000);
+  });
+}
+
+function handleScreenshot(input){
+  if(input.files[0]){
+    screenshotFile = input.files[0];
+    document.getElementById('fuText').textContent = '✅ '+input.files[0].name;
+    document.getElementById('fileUpload').classList.add('has-file');
+  }
+}
+
+function showMsg(text,type='error'){
+  const el=document.getElementById('formMsg');
+  el.textContent=text; el.className='msg '+type; el.style.display=text?'block':'none';
+}
+
+async function submitProof(){
+  const method = document.getElementById('method').value;
+  const sender = document.getElementById('senderNum').value.trim();
+  const txn = document.getElementById('txnId').value.trim();
+  const amount = document.getElementById('amount').value;
+  const plan = document.getElementById('planSel').value;
+  const note = document.getElementById('note').value.trim();
+
+  if(!method||!sender||!txn||!amount)return showMsg('Please fill all required fields');
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled=true; btn.innerHTML='⏳ Submitting...';
+
+  try{
+    let screenshotUrl = null;
+
+    // Upload screenshot if provided
+    if(screenshotFile){
+      const ext = screenshotFile.name.split('.').pop();
+      const path = `payment_proofs/${currentUser.id}_${Date.now()}.${ext}`;
+      const {data,error} = await sb.storage.from('screenshots').upload(path,screenshotFile,{upsert:true});
+      if(!error){
+        const {data:urlData} = sb.storage.from('screenshots').getPublicUrl(path);
+        screenshotUrl = urlData.publicUrl;
+      }
+    }
+
+    const {error} = await sb.from('payment_proofs').insert({
+      user_id: currentUser.id,
+      user_email: currentUser.email,
+      method, sender_number:sender, transaction_id:txn,
+      amount:parseFloat(amount), plan, screenshot_url:screenshotUrl,
+      note, status:'pending'
+    });
+
+    if(error)throw error;
+
+    document.querySelectorAll('.card').forEach(c=>c.style.display='none');
+    document.getElementById('successBox').style.display='block';
+  }catch(e){
+    showMsg('Error: '+e.message);
+    btn.disabled=false; btn.innerHTML='📨 Submit Payment Proof';
+  }
+}
+</script>
+</body>
+</html>

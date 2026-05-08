@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VectoAI — Admin Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0a14;--bg2:#12121f;--bg3:#1a1a2e;--accent:#7c3aed;--accent2:#a78bfa;--text:#f1f0ff;--muted:#8b8aa8;--border:#2a2a3e;--green:#22c55e;--red:#ef4444;--yellow:#f59e0b}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* LOGIN GATE */
+.login-gate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.gate-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:32px;width:100%;max-width:380px;text-align:center}
+.gate-card h2{font-size:20px;font-weight:800;margin-bottom:6px}
+.gate-card p{color:var(--muted);font-size:13px;margin-bottom:20px}
+input{width:100%;padding:11px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color .2s;margin-bottom:12px}
+input:focus{border-color:var(--accent)}
+input::placeholder{color:var(--muted)}
+
+/* LAYOUT */
+.layout{display:flex;min-height:100vh;display:none}
+.sidebar{width:220px;background:var(--bg2);border-right:1px solid var(--border);padding:20px 16px;display:flex;flex-direction:column;position:fixed;height:100vh}
+.logo{font-size:16px;font-weight:800;display:flex;align-items:center;gap:8px;margin-bottom:6px;color:var(--text)}
+.logo-icon{width:28px;height:28px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.admin-tag{font-size:10px;color:var(--muted);margin-bottom:24px;letter-spacing:1px;font-weight:700}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;font-size:14px;font-weight:500;color:var(--muted);cursor:pointer;border:none;background:none;width:100%;font-family:inherit;margin-bottom:4px;transition:all .2s}
+.nav-item:hover,.nav-item.active{background:var(--bg3);color:var(--text)}
+.main{margin-left:220px;padding:28px;flex:1}
+.page-title{font-size:22px;font-weight:800;margin-bottom:4px}
+.page-sub{font-size:14px;color:var(--muted);margin-bottom:24px}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px}
+.stat-val{font-size:28px;font-weight:800;margin-bottom:2px}
+.stat-lbl{font-size:12px;color:var(--muted)}
+
+/* TABLE */
+.table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:20px}
+.table-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.table-head h3{font-size:15px;font-weight:700}
+.filter-tabs{display:flex;gap:4px}
+.ftab{padding:5px 12px;border:none;background:var(--bg3);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;border-radius:6px;transition:all .15s;font-family:inherit}
+.ftab.active{background:var(--accent);color:#fff}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;letter-spacing:0.5px;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:12px 16px;font-size:13px;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,0.02)}
+
+.badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700}
+.badge-pending{background:rgba(245,158,11,0.15);color:var(--yellow)}
+.badge-approved{background:rgba(34,197,94,0.15);color:var(--green)}
+.badge-rejected{background:rgba(239,68,68,0.15);color:var(--red)}
+.badge-pro{background:rgba(124,58,237,0.2);color:var(--accent2)}
+.badge-free{background:rgba(139,138,168,0.15);color:var(--muted)}
+
+.btn-sm{padding:5px 12px;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;margin-right:4px;transition:all .15s}
+.btn-approve{background:rgba(34,197,94,0.15);color:var(--green)}
+.btn-approve:hover{background:rgba(34,197,94,0.3)}
+.btn-reject{background:rgba(239,68,68,0.1);color:var(--red)}
+.btn-reject:hover{background:rgba(239,68,68,0.25)}
+.btn-view{background:var(--bg3);color:var(--muted)}
+.btn-view:hover{color:var(--text)}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:none;align-items:center;justify-content:center;z-index:300;padding:20px}
+.modal-overlay.show{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:500px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:17px;font-weight:800;margin-bottom:16px}
+.detail-row{display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.detail-row:last-child{border-bottom:none}
+.detail-key{color:var(--muted);min-width:130px;font-weight:600}
+.detail-val{color:var(--text);word-break:break-all}
+.modal-actions{display:flex;gap:8px;margin-top:16px}
+.modal-actions button{flex:1;padding:10px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.proof-img{width:100%;border-radius:8px;margin-top:12px;border:1px solid var(--border)}
+
+.btn-full{display:inline-block;padding:10px 20px;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;background:var(--accent);color:#fff;margin-bottom:20px}
+
+.empty-row td{text-align:center;color:var(--muted);padding:32px}
+
+.toast{position:fixed;bottom:24px;right:24px;background:var(--green);color:#000;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:700;display:none;z-index:500}
+.toast.show{display:block}
+.toast.red{background:var(--red)}
+
+.refresh-btn{background:none;border:1px solid var(--border);color:var(--muted);padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+.refresh-btn:hover{color:var(--text);border-color:var(--accent)}
+</style>
+</head>
+<body>
+
+<!-- LOGIN GATE -->
+<div class="login-gate" id="loginGate">
+  <div class="gate-card">
+    <div style="font-size:36px;margin-bottom:12px">🔐</div>
+    <h2>Admin Login</h2>
+    <p>Login with your admin account to access the panel</p>
+    <div id="gateMsg" style="color:#fca5a5;font-size:13px;margin-bottom:12px;display:none"></div>
+    <input type="email" id="adminEmail" placeholder="Admin email">
+    <input type="password" id="adminPass" placeholder="Password">
+    <button onclick="adminLogin()" style="width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Login to Admin Panel</button>
+  </div>
+</div>
+
+<!-- ADMIN LAYOUT -->
+<div class="layout" id="adminLayout">
+  <div class="sidebar">
+    <div>
+      <div class="logo"><div class="logo-icon">⬡</div> VectoAI</div>
+      <div class="admin-tag">ADMIN PANEL</div>
+    </div>
+    <button class="nav-item active" onclick="showTab('payments')">💳 Payments</button>
+    <button class="nav-item" onclick="showTab('users')">👤 Users</button>
+    <button class="nav-item" onclick="showTab('stats')">📊 Stats</button>
+    <div style="margin-top:auto">
+      <button class="nav-item" onclick="adminLogout()">🚪 Logout</button>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- PAYMENTS TAB -->
+    <div id="paymentsTab">
+      <div class="page-title">💳 Payment Proofs</div>
+      <div class="page-sub">Review and approve user payment submissions</div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center">
+        <div class="filter-tabs">
+          <button class="ftab active" onclick="filterPayments('all')">All</button>
+          <button class="ftab" onclick="filterPayments('pending')">⏳ Pending</button>
+          <button class="ftab" onclick="filterPayments('approved')">✅ Approved</button>
+          <button class="ftab" onclick="filterPayments('rejected')">❌ Rejected</button>
+        </div>
+        <button class="refresh-btn" onclick="loadPayments()">↺ Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Method</th>
+              <th>TrxID</th>
+              <th>Amount</th>
+              <th>Plan</th>
+              <th>Date</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="paymentsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- USERS TAB -->
+    <div id="usersTab" style="display:none">
+      <div class="page-title">👤 Users</div>
+      <div class="page-sub">Manage user accounts and subscriptions</div>
+      <button class="refresh-btn" onclick="loadUsers()" style="margin-bottom:16px">↺ Refresh</button>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Plan</th>
+              <th>Joined</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="usersBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- STATS TAB -->
+    <div id="statsTab" style="display:none">
+      <div class="page-title">📊 Statistics</div>
+      <div class="page-sub">Overview of VectoAI usage</div>
+      <div class="stats" id="statsGrid"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h3>💳 Payment Details</h3>
+    <div id="modalContent"></div>
+    <div class="modal-actions" id="modalActions"></div>
+    <button onclick="closeModal()" style="width:100%;padding:10px;margin-top:8px;background:var(--bg3);border:1px solid var(--border);border-radius:9px;color:var(--muted);cursor:pointer;font-family:inherit;font-size:13px;font-weight:600">Close</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const sb = supabase.createClient(CONFIG.supabase.url, CONFIG.supabase.anonKey);
+let allPayments = [], allUsers = [], currentFilter = 'all', currentProofId = null;
+
+// ADMIN LOGIN
+async function adminLogin(){
+  const email = document.getElementById('adminEmail').value.trim();
+  const pass = document.getElementById('adminPass').value;
+  const {data,error} = await sb.auth.signInWithPassword({email,password:pass});
+  if(error){document.getElementById('gateMsg').textContent=error.message;document.getElementById('gateMsg').style.display='block';return;}
+  if(data.user.email !== CONFIG.adminEmail){
+    await sb.auth.signOut();
+    document.getElementById('gateMsg').textContent='Access denied. Not an admin account.';
+    document.getElementById('gateMsg').style.display='block';
+    return;
+  }
+  enterAdmin();
+}
+
+async function checkSession(){
+  const {data:{session}} = await sb.auth.getSession();
+  if(session && session.user.email === CONFIG.adminEmail) enterAdmin();
+}
+
+function enterAdmin(){
+  document.getElementById('loginGate').style.display='none';
+  document.getElementById('adminLayout').style.display='flex';
+  loadPayments(); loadUsers(); loadStats();
+}
+
+async function adminLogout(){
+  await sb.auth.signOut();
+  document.getElementById('adminLayout').style.display='none';
+  document.getElementById('loginGate').style.display='flex';
+}
+
+checkSession();
+
+// PAYMENTS
+async function loadPayments(){
+  const {data} = await sb.from('payment_proofs').select('*').order('created_at',{ascending:false});
+  allPayments = data || [];
+  renderPayments();
+}
+
+function filterPayments(f){
+  currentFilter = f;
+  document.querySelectorAll('.ftab').forEach((b,i)=>b.classList.toggle('active',['all','pending','approved','rejected'][i]===f));
+  renderPayments();
+}
+
+function renderPayments(){
+  const list = currentFilter==='all' ? allPayments : allPayments.filter(p=>p.status===currentFilter);
+  const tbody = document.getElementById('paymentsBody');
+  if(!list.length){tbody.innerHTML='<tr class="empty-row"><td colspan="8">No payments found</td></tr>';return;}
+  tbody.innerHTML = list.map(p=>`
+    <tr>
+      <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.user_email||'—'}</td>
+      <td>${p.method||'—'}</td>
+      <td style="font-family:monospace;font-size:12px">${p.transaction_id||'—'}</td>
+      <td style="font-weight:700">৳${p.amount||'?'}</td>
+      <td>${p.plan||'—'}</td>
+      <td style="font-size:12px;color:var(--muted)">${new Date(p.created_at).toLocaleDateString()}</td>
+      <td><span class="badge badge-${p.status}">${p.status}</span></td>
+      <td>
+        <button class="btn-sm btn-view" onclick="viewProof('${p.id}')">👁 View</button>
+        ${p.status==='pending'?`
+          <button class="btn-sm btn-approve" onclick="quickApprove('${p.id}','${p.user_id}','${p.plan}')">✅</button>
+          <button class="btn-sm btn-reject" onclick="quickReject('${p.id}')">❌</button>
+        `:''}
+      </td>
+    </tr>`).join('');
+}
+
+function viewProof(id){
+  const p = allPayments.find(x=>x.id===id);
+  if(!p)return;
+  currentProofId = id;
+  document.getElementById('modalContent').innerHTML=`
+    <div class="detail-row"><span class="detail-key">User Email</span><span class="detail-val">${p.user_email||'—'}</span></div>
+    <div class="detail-row"><span class="detail-key">Method</span><span class="detail-val">${p.method||'—'}</span></div>
+    <div class="detail-row"><span class="detail-key">Sender Number</span><span class="detail-val">${p.sender_number||'—'}</span></div>
+    <div class="detail-row"><span class="detail-key">Transaction ID</span><span class="detail-val" style="font-family:monospace">${p.transaction_id||'—'}</span></div>
+    <div class="detail-row"><span class="detail-key">Amount</span><span class="detail-val" style="font-weight:800;color:var(--accent2)">৳${p.amount||'?'}</span></div>
+    <div class="detail-row"><span class="detail-key">Plan</span><span class="detail-val">${p.plan||'—'}</span></div>
+    <div class="detail-row"><span class="detail-key">Status</span><span class="detail-val"><span class="badge badge-${p.status}">${p.status}</span></span></div>
+    <div class="detail-row"><span class="detail-key">Note</span><span class="detail-val">${p.note||'—'}</span></div>
+    <div class="detail-row"><span class="detail-key">Date</span><span class="detail-val">${new Date(p.created_at).toLocaleString()}</span></div>
+    ${p.screenshot_url?`<img src="${p.screenshot_url}" alt="Payment screenshot" class="proof-img" onerror="this.style.display='none'">`:'<p style="font-size:12px;color:var(--muted);margin-top:12px">No screenshot uploaded</p>'}
+  `;
+  const actions = document.getElementById('modalActions');
+  if(p.status==='pending'){
+    actions.innerHTML=`
+      <button onclick="approvePayment('${p.id}','${p.user_id}','${p.plan}')" style="background:rgba(34,197,94,0.2);color:var(--green)">✅ Approve & Activate Pro</button>
+      <button onclick="rejectPayment('${p.id}')" style="background:rgba(239,68,68,0.15);color:var(--red)">❌ Reject</button>`;
+  } else {
+    actions.innerHTML=`<p style="font-size:13px;color:var(--muted);text-align:center;width:100%">This payment has been <strong>${p.status}</strong></p>`;
+  }
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function closeModal(){document.getElementById('modalOverlay').classList.remove('show');}
+
+async function approvePayment(proofId, userId, plan){
+  closeModal();
+  // Calculate expiry
+  const expiresAt = new Date();
+  if(plan==='yearly') expiresAt.setFullYear(expiresAt.getFullYear()+1);
+  else expiresAt.setMonth(expiresAt.getMonth()+1);
+
+  // Update proof status
+  await sb.from('payment_proofs').update({status:'approved'}).eq('id',proofId);
+  // Upgrade user plan
+  await sb.from('profiles').update({plan:'pro', plan_expires_at:expiresAt.toISOString()}).eq('id',userId);
+
+  showToast('✅ Payment approved! User upgraded to Pro');
+  await loadPayments(); await loadUsers(); await loadStats();
+}
+
+async function quickApprove(proofId, userId, plan){
+  if(!confirm('Approve this payment and upgrade user to Pro?'))return;
+  await approvePayment(proofId, userId, plan);
+}
+
+async function rejectPayment(proofId){
+  const reason = prompt('Reason for rejection (optional):');
+  await sb.from('payment_proofs').update({status:'rejected', admin_note:reason||''}).eq('id',proofId);
+  closeModal();
+  showToast('Payment rejected','red');
+  await loadPayments();
+}
+
+async function quickReject(proofId){
+  if(!confirm('Reject this payment?'))return;
+  await rejectPayment(proofId);
+}
+
+// USERS
+async function loadUsers(){
+  const {data} = await sb.from('profiles').select('*').order('created_at',{ascending:false});
+  allUsers = data || [];
+  renderUsers();
+}
+
+function renderUsers(){
+  const tbody = document.getElementById('usersBody');
+  if(!allUsers.length){tbody.innerHTML='<tr class="empty-row"><td colspan="5">No users yet</td></tr>';return;}
+  tbody.innerHTML = allUsers.map(u=>`
+    <tr>
+      <td style="font-weight:600">${u.name||'—'}</td>
+      <td style="font-size:12px">${u.email||'—'}</td>
+      <td><span class="badge badge-${u.plan==='pro'?'pro':'free'}">${u.plan==='pro'?'Pro ⭐':'Free'}</span></td>
+      <td style="font-size:12px;color:var(--muted)">${new Date(u.created_at).toLocaleDateString()}</td>
+      <td>
+        ${u.plan==='pro'
+          ?`<button class="btn-sm btn-reject" onclick="downgradeUser('${u.id}')">Downgrade</button>`
+          :``}
+      </td>
+    </tr>`).join('');
+}
+
+async function downgradeUser(userId){
+  if(!confirm('Downgrade this user to Free plan?'))return;
+  await sb.from('profiles').update({plan:'free',plan_expires_at:null}).eq('id',userId);
+  showToast('User downgraded to Free','red');
+  await loadUsers();
+}
+
+// STATS
+async function loadStats(){
+  const [{count:totalUsers},{count:proUsers},{count:totalConv},{count:pendingPay}] = await Promise.all([
+    sb.from('profiles').select('*',{count:'exact',head:true}),
+    sb.from('profiles').select('*',{count:'exact',head:true}).eq('plan','pro'),
+    sb.from('conversions').select('*',{count:'exact',head:true}),
+    sb.from('payment_proofs').select('*',{count:'exact',head:true}).eq('status','pending'),
+  ]);
+  document.getElementById('statsGrid').innerHTML=`
+    <div class="stat"><div class="stat-val">${totalUsers||0}</div><div class="stat-lbl">Total users</div></div>
+    <div class="stat"><div class="stat-val" style="color:var(--accent2)">${proUsers||0}</div><div class="stat-lbl">Pro users</div></div>
+    <div class="stat"><div class="stat-val">${totalConv||0}</div><div class="stat-lbl">Total conversions</div></div>
+    <div class="stat"><div class="stat-val" style="color:var(--yellow)">${pendingPay||0}</div><div class="stat-lbl">Pending payments</div></div>
+    <div class="stat"><div class="stat-val" style="color:var(--green)">৳${(proUsers||0)*299}</div><div class="stat-lbl">Est. monthly revenue</div></div>
+  `;
+}
+
+function showTab(tab){
+  ['payments','users','stats'].forEach(t=>{
+    document.getElementById(t+'Tab').style.display=t===tab?'block':'none';
+  });
+  document.querySelectorAll('.nav-item').forEach((n,i)=>n.classList.toggle('active',i===['payments','users','stats'].indexOf(tab)));
+}
+
+function showToast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show '+(type==='red'?'red':'');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+</script>
+</body>
+</html>
